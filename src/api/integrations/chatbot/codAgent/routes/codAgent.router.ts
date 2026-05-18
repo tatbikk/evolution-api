@@ -2,19 +2,20 @@ import { RouterBroker } from '@api/abstract/abstract.router';
 import { IgnoreJidDto } from '@api/dto/chatbot.dto';
 import { InstanceDto } from '@api/dto/instance.dto';
 import { HttpStatus } from '@api/routes/index.router';
-import { codAgentController, codOrderController } from '@api/server.module';
+import { codAgentController, codMerchantController, codOrderController } from '@api/server.module';
 import {
   codAgentIgnoreJidSchema,
   codAgentSchema,
   codAgentSettingSchema,
   codAgentStatusSchema,
+  codMerchantSchema,
   codOrderSchema,
   instanceSchema,
 } from '@validate/validate.schema';
 import { RequestHandler, Router } from 'express';
 
 import { CodAgentDto, CodAgentSettingDto } from '../dto/codAgent.dto';
-import { CreateCodOrderDto } from '../dto/codOrder.dto';
+import { CodMerchantDto, CreateCodOrderDto } from '../dto/codOrder.dto';
 
 export class CodAgentRouter extends RouterBroker {
   constructor(...guards: RequestHandler[]) {
@@ -118,6 +119,42 @@ export class CodAgentRouter extends RouterBroker {
           execute: (instance, data) => codOrderController.createOrder(instance, data),
         });
         res.status(HttpStatus.CREATED).json(response);
+      })
+      .get(this.routerPath('order/list'), ...guards, async (req, res) => {
+        const response = await this.dataValidate<InstanceDto>({
+          request: req,
+          schema: instanceSchema,
+          ClassRef: InstanceDto,
+          execute: (instance) => codOrderController.listOrders(instance, req.query.status as string),
+        });
+        res.status(HttpStatus.OK).json(response);
+      })
+      .get(this.routerPath('order/fetch/:orderId'), ...guards, async (req, res) => {
+        const response = await this.dataValidate<InstanceDto>({
+          request: req,
+          schema: instanceSchema,
+          ClassRef: InstanceDto,
+          execute: (instance) => codOrderController.getOrder(instance, req.params.orderId),
+        });
+        res.status(HttpStatus.OK).json(response);
+      })
+      .get(this.routerPath('merchant'), ...guards, async (req, res) => {
+        const response = await this.dataValidate<InstanceDto>({
+          request: req,
+          schema: instanceSchema,
+          ClassRef: InstanceDto,
+          execute: (instance) => codMerchantController.getMerchant(instance),
+        });
+        res.status(HttpStatus.OK).json(response);
+      })
+      .post(this.routerPath('merchant'), ...guards, async (req, res) => {
+        const response = await this.dataValidate<CodMerchantDto>({
+          request: req,
+          schema: codMerchantSchema,
+          ClassRef: CodMerchantDto,
+          execute: (instance, data) => codMerchantController.setMerchant(instance, data),
+        });
+        res.status(HttpStatus.OK).json(response);
       });
   }
 

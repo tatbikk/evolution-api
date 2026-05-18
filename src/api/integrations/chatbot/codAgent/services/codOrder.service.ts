@@ -37,14 +37,30 @@ export class CodOrderService {
     private readonly cache: CacheService,
   ) {}
 
-  async createOrder(instance: InstanceDto, data: CreateCodOrderDto): Promise<CreateCodOrderResult> {
-    const instanceRecord = await this.prismaRepository.instance.findFirst({
-      where: { name: instance.instanceName },
-    });
-    if (!instanceRecord) {
-      throw new BadRequestException('Instance not found');
+  private async resolveInstanceId(instance: InstanceDto): Promise<string> {
+    const record = await this.prismaRepository.instance.findFirst({ where: { name: instance.instanceName } });
+    if (!record) throw new BadRequestException('Instance not found');
+    return record.id;
+  }
+
+  /** List orders for the calling instance, optionally filtered by status. */
+  async listOrders(instance: InstanceDto, status?: string): Promise<CodOrder[]> {
+    const instanceId = await this.resolveInstanceId(instance);
+    return codOrderRepository.listByInstance(instanceId, status);
+  }
+
+  /** Fetch one order (with items), enforcing that it belongs to the instance. */
+  async getOrder(instance: InstanceDto, orderId: string): Promise<CodOrder> {
+    const instanceId = await this.resolveInstanceId(instance);
+    const order = await codOrderRepository.findById(orderId);
+    if (!order || order.instanceId !== instanceId) {
+      throw new BadRequestException('Order not found');
     }
-    const instanceId = instanceRecord.id;
+    return order;
+  }
+
+  async createOrder(instance: InstanceDto, data: CreateCodOrderDto): Promise<CreateCodOrderResult> {
+    const instanceId = await this.resolveInstanceId(instance);
 
     await this.enforceRateLimit(instanceId);
 

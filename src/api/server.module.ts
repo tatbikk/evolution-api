@@ -21,8 +21,10 @@ import { ChatbotController } from './integrations/chatbot/chatbot.controller';
 import { ChatwootController } from './integrations/chatbot/chatwoot/controllers/chatwoot.controller';
 import { ChatwootService } from './integrations/chatbot/chatwoot/services/chatwoot.service';
 import { CodAgentController } from './integrations/chatbot/codAgent/controllers/codAgent.controller';
+import { CodMerchantController } from './integrations/chatbot/codAgent/controllers/codMerchant.controller';
 import { CodOrderController } from './integrations/chatbot/codAgent/controllers/codOrder.controller';
 import { CodAgentService } from './integrations/chatbot/codAgent/services/codAgent.service';
+import { CodMerchantService } from './integrations/chatbot/codAgent/services/codMerchant.service';
 import { CodOrderService } from './integrations/chatbot/codAgent/services/codOrder.service';
 import { CodSchedulerService } from './integrations/chatbot/codAgent/services/codScheduler.service';
 import { DifyController } from './integrations/chatbot/dify/controllers/dify.controller';
@@ -148,6 +150,9 @@ export const codAgentController = new CodAgentController(codAgentService, prisma
 
 const codOrderService = new CodOrderService(waMonitor, prismaRepository, cache);
 export const codOrderController = new CodOrderController(codOrderService);
+
+const codMerchantService = new CodMerchantService(prismaRepository);
+export const codMerchantController = new CodMerchantController(codMerchantService);
 
 export const codSchedulerService = new CodSchedulerService(waMonitor, prismaRepository);
 if (configService.get('CODAGENT').ENABLED) {

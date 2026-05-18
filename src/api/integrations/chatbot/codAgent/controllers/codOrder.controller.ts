@@ -14,10 +14,24 @@ export class CodOrderController {
 
   constructor(private readonly codOrderService: CodOrderService) {}
 
-  public async createOrder(instance: InstanceDto, data: CreateCodOrderDto) {
+  private ensureEnabled(): void {
     if (!this.integrationEnabled) {
       throw new BadRequestException('CodAgent is disabled');
     }
+  }
+
+  public async createOrder(instance: InstanceDto, data: CreateCodOrderDto) {
+    this.ensureEnabled();
     return this.codOrderService.createOrder(instance, data);
+  }
+
+  public async listOrders(instance: InstanceDto, status?: string) {
+    this.ensureEnabled();
+    return this.codOrderService.listOrders(instance, status);
+  }
+
+  public async getOrder(instance: InstanceDto, orderId: string) {
+    this.ensureEnabled();
+    return this.codOrderService.getOrder(instance, orderId);
   }
 }

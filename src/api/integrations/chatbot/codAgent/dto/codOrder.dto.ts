@@ -79,6 +79,22 @@ export interface CreateCodOrderItemInput {
 }
 
 /**
+ * Request body for `POST /codAgent/merchant/:instanceName` — the per-instance
+ * COD business profile. All fields are optional (partial upsert). The
+ * escalation contact is given as a plain phone number; the service derives
+ * the WhatsApp jid.
+ */
+export class CodMerchantDto {
+  businessName?: string;
+  escalationNumber?: string;
+  confirmationTemplate?: string;
+  reminderTemplate?: string;
+  reminderIntervalMinutes?: number;
+  maxReminders?: number;
+  noResponseAfterMinutes?: number;
+}
+
+/**
  * Request body accepted by `POST /codAgent/order/:instanceName`.
  * The customer is identified by a plain phone number; the service derives
  * the WhatsApp jid. `instanceId` is never accepted from the client — it is
