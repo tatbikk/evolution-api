@@ -83,6 +83,30 @@ export class CodOrderRepository extends SupabaseTableRepository {
   async listByInstance(instanceId: string, status?: string): Promise<CodOrder[]> {
     return this.findMany({ where: status ? { instanceId, status } : { instanceId } });
   }
+
+  /** List every order in a given status across all instances. */
+  async listByStatus(status: string): Promise<CodOrder[]> {
+    return this.findMany({ where: { status } });
+  }
+
+  /**
+   * Compare-and-set update: applies `data` only while the order is still in
+   * `expectedStatus`. Returns the updated row, or null if the status no
+   * longer matched (e.g. the customer acted between read and write). This
+   * keeps the scheduler from overwriting a decision made by the agent.
+   */
+  async updateIfStatus(id: string, expectedStatus: string, data: Record<string, any>): Promise<CodOrder | null> {
+    const payload = { ...data, updatedAt: new Date().toISOString() };
+    const { data: rows, error } = await this.db
+      .from(this.table)
+      .update(payload)
+      .eq('id', id)
+      .eq('status', expectedStatus)
+      .select();
+
+    if (error) this.fail('updateIfStatus', error.message);
+    return rows?.[0] ?? null;
+  }
 }
 
 export const codOrderRepository = new CodOrderRepository();

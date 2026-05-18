@@ -9,6 +9,7 @@ export interface CodMerchant {
   businessName?: string | null;
   escalationJid?: string | null;
   confirmationTemplate?: string | null;
+  reminderTemplate?: string | null;
   reminderIntervalMinutes: number;
   maxReminders: number;
   noResponseAfterMinutes: number;

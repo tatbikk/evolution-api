@@ -89,6 +89,9 @@ create table if not exists public.cod_merchant (
   -- {customerName}, {orderRef}, {itemsList}, {total}, {address} placeholders.
   -- When null, a built-in default template is used.
   "confirmationTemplate"    text,
+  -- Reminder message template. Supports {businessName}, {customerName},
+  -- {orderRef}. When null, a built-in default template is used.
+  "reminderTemplate"        text,
   "reminderIntervalMinutes" integer not null default 360,
   "maxReminders"            integer not null default 2,
   "noResponseAfterMinutes"  integer not null default 1440,
