@@ -92,7 +92,12 @@ async function transitionTo(
   }
   const data: Record<string, any> = { status: to };
   if (reason) data.statusReason = reason;
-  await codOrderRepository.update({ where: { id: ctx.order.id }, data });
+  // Compare-and-set on the current status so two concurrent agent runs
+  // cannot apply conflicting decisions to the same order.
+  const updated = await codOrderRepository.updateIfStatus(ctx.order.id, ctx.order.status, data);
+  if (!updated) {
+    return `The order status changed during the conversation (it was "${ctx.order.status}"). Do not assume the change applied — re-check the order before acting.`;
+  }
   return successMessage;
 }
 
@@ -120,7 +125,10 @@ const rescheduleOrder: ToolExecutor = async (args, ctx) => {
   const data: Record<string, any> = { status: 'rescheduled', deliveryDate: date.toISOString() };
   const reason = asTrimmedString(args?.reason);
   if (reason) data.statusReason = reason;
-  await codOrderRepository.update({ where: { id: ctx.order.id }, data });
+  const updated = await codOrderRepository.updateIfStatus(ctx.order.id, ctx.order.status, data);
+  if (!updated) {
+    return `The order status changed during the conversation; the reschedule was not applied.`;
+  }
   return `Order rescheduled to ${date.toISOString()}.`;
 };
 
@@ -153,7 +161,10 @@ const escalateToHuman: ToolExecutor = async (args, ctx) => {
 
   const data: Record<string, any> = { status: 'needs_human' };
   if (reason) data.statusReason = reason;
-  await codOrderRepository.update({ where: { id: ctx.order.id }, data });
+  const updated = await codOrderRepository.updateIfStatus(ctx.order.id, ctx.order.status, data);
+  if (!updated) {
+    return `The order status changed during the conversation; escalation was not applied.`;
+  }
 
   // Notification is best-effort — its failure must not undo the escalation.
   await ctx.notifyMerchant(

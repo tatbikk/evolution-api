@@ -37,7 +37,9 @@ const TRANSITIONS: Record<CodOrderStatus, CodOrderStatus[]> = {
   awaiting_customer: ['confirmed', 'rescheduled', 'cancelled', 'needs_human', 'no_response'],
   rescheduled: ['awaiting_customer', 'confirmed', 'cancelled', 'needs_human'],
   needs_human: ['awaiting_customer', 'confirmed', 'rescheduled', 'cancelled'],
-  no_response: ['awaiting_customer', 'cancelled', 'needs_human'],
+  // A customer who replies after the no-response timeout can still decide:
+  // a late reply is a valid reply.
+  no_response: ['awaiting_customer', 'confirmed', 'rescheduled', 'cancelled', 'needs_human'],
   confirmed: ['rescheduled', 'cancelled'],
   cancelled: [],
 };

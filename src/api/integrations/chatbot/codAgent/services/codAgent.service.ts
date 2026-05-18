@@ -79,6 +79,13 @@ export class CodAgentService extends BaseChatbotService<CodAgentBot, CodAgentSet
         return;
       }
 
+      // Once escalated, a human owns the conversation — the agent steps back
+      // so it does not reply over the human handling the order.
+      if (order.status === 'needs_human') {
+        this.logger.info(`[CodAgent] Order ${order.id} is with a human; agent staying silent`);
+        return;
+      }
+
       let llm;
       try {
         llm = createLlmProvider(bot.llmProvider || 'openai', apiKey);

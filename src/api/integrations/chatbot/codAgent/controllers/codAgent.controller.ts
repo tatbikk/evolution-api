@@ -3,7 +3,7 @@ import { PrismaRepository } from '@api/repository/repository.service';
 import { WAMonitoringService } from '@api/services/monitor.service';
 import { configService } from '@config/env.config';
 import { Logger } from '@config/logger.config';
-import { BadRequestException } from '@exceptions';
+import { NotFoundException } from '@exceptions';
 import { IntegrationSession } from '@prisma/client';
 
 import { BaseChatbotController } from '../../base-chatbot.controller';
@@ -95,7 +95,7 @@ export class CodAgentController extends BaseChatbotController<CodAgentBot, CodAg
     });
 
     if (!instanceRecord || bot.instanceId !== instanceRecord.id) {
-      throw new BadRequestException(`${this.integrationName} not found`);
+      throw new NotFoundException(`${this.integrationName} not found`);
     }
 
     return bot;

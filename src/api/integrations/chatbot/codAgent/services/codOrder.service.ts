@@ -3,7 +3,7 @@ import { PrismaRepository } from '@api/repository/repository.service';
 import { CacheService } from '@api/services/cache.service';
 import { WAMonitoringService } from '@api/services/monitor.service';
 import { Logger } from '@config/logger.config';
-import { BadRequestException } from '@exceptions';
+import { BadRequestException, NotFoundException } from '@exceptions';
 
 import { buildConfirmationMessage } from '../domain/confirmationMessage';
 import { CodOrder, CreateCodOrderDto } from '../dto/codOrder.dto';
@@ -54,7 +54,7 @@ export class CodOrderService {
     const instanceId = await this.resolveInstanceId(instance);
     const order = await codOrderRepository.findById(orderId);
     if (!order || order.instanceId !== instanceId) {
-      throw new BadRequestException('Order not found');
+      throw new NotFoundException('Order not found');
     }
     return order;
   }
@@ -76,6 +76,10 @@ export class CodOrderService {
       throw new BadRequestException('customerNumber must contain digits');
     }
     const customerJid = `${customerNumber}@s.whatsapp.net`;
+
+    if (data.deliveryDate && Number.isNaN(Date.parse(data.deliveryDate))) {
+      throw new BadRequestException('deliveryDate is not a valid date');
+    }
 
     let created = true;
     let order: CodOrder;
