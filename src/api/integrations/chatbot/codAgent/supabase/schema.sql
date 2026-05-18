@@ -73,6 +73,28 @@ create table if not exists public.cod_agent_setting (
 );
 
 -- ----------------------------------------------------------------------------
+-- Keep "updatedAt" fresh on every row update (defense for any direct writes,
+-- e.g. from a future admin dashboard; the backend adapter also sets it).
+-- ----------------------------------------------------------------------------
+create or replace function public.cod_agent_set_updated_at()
+returns trigger as $$
+begin
+  new."updatedAt" = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists cod_agent_updated_at on public.cod_agent;
+create trigger cod_agent_updated_at
+  before update on public.cod_agent
+  for each row execute function public.cod_agent_set_updated_at();
+
+drop trigger if exists cod_agent_setting_updated_at on public.cod_agent_setting;
+create trigger cod_agent_setting_updated_at
+  before update on public.cod_agent_setting
+  for each row execute function public.cod_agent_set_updated_at();
+
+-- ----------------------------------------------------------------------------
 -- Lock down: enable RLS, add no policies -> service role only.
 -- ----------------------------------------------------------------------------
 alter table public.cod_agent         enable row level security;

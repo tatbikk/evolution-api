@@ -14,13 +14,22 @@ const DEFAULT_SYSTEM_PROMPT =
 
 const DEFAULT_MODEL = 'gpt-4o-mini';
 
+// Keep WhatsApp replies responsive and bounded.
+const OPENAI_TIMEOUT_MS = 30000;
+const OPENAI_MAX_RETRIES = 2;
+const MAX_COMPLETION_TOKENS = 600;
+
+// getConversationMessage() encodes non-text messages as "<type>Message|<id>...".
+const UNSUPPORTED_MEDIA_REGEX =
+  /^(audioMessage|imageMessage|videoMessage|documentMessage|documentWithCaptionMessage)\|/;
+
 /**
  * COD Agent service.
  *
- * Phase 1: a scaffold that forwards the customer message to OpenAI with the
- * bot's configured system prompt and replies over WhatsApp. The tool-calling
- * agent (confirm_order, cancel_order, ...) and the LLM provider abstraction
- * are added in a later phase.
+ * Phase 1: a scaffold that forwards the customer text message to OpenAI with
+ * the bot's configured system prompt and replies over WhatsApp. The
+ * tool-calling agent (confirm_order, cancel_order, ...) and the LLM provider
+ * abstraction are added in a later phase.
  */
 export class CodAgentService extends BaseChatbotService<CodAgentBot, CodAgentSetting> {
   constructor(waMonitor: WAMonitoringService, prismaRepository: PrismaRepository, configService: ConfigService) {
@@ -56,6 +65,15 @@ export class CodAgentService extends BaseChatbotService<CodAgentBot, CodAgentSet
         return;
       }
 
+      // Phase 1 handles text only. Audio transcription / vision come later;
+      // until then non-text messages get a graceful reply instead of being
+      // forwarded verbatim to the model.
+      if (UNSUPPORTED_MEDIA_REGEX.test(content.trim())) {
+        this.logger.debug('[CodAgent] Non-text message received, replying with unknownMessage');
+        await this.sendUnknownMessage(instance, remoteJid, settings);
+        return;
+      }
+
       const provider = (bot.llmProvider || 'openai').toLowerCase();
       if (provider !== 'openai') {
         this.logger.error(`[CodAgent] Unsupported llmProvider "${provider}" — only "openai" is supported in phase 1`);
@@ -69,11 +87,12 @@ export class CodAgentService extends BaseChatbotService<CodAgentBot, CodAgentSet
         return;
       }
 
-      const openai = new OpenAI({ apiKey });
+      const openai = new OpenAI({ apiKey, timeout: OPENAI_TIMEOUT_MS, maxRetries: OPENAI_MAX_RETRIES });
       const systemPrompt = bot.systemPrompt?.trim() || DEFAULT_SYSTEM_PROMPT;
 
       const completion = await openai.chat.completions.create({
         model: bot.llmModel?.trim() || DEFAULT_MODEL,
+        max_tokens: MAX_COMPLETION_TOKENS,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: pushName ? `[${pushName}] ${content}` : content },

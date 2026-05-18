@@ -81,23 +81,38 @@ export class SupabaseChatbotRepository {
     return payload;
   }
 
+  /** Postgres "invalid text representation" — e.g. a malformed uuid filter. */
+  private isInvalidValueError(error: any): boolean {
+    return error?.code === '22P02';
+  }
+
   async findFirst({ where }: FindArgs = {}): Promise<any> {
     const query = this.applyWhere(this.db.from(this.table).select('*'), where).limit(1);
     const { data, error } = await query.maybeSingle();
-    if (error) this.fail('findFirst', error.message);
+    if (error) {
+      // A malformed filter value cannot match any row — treat it as "not found".
+      if (this.isInvalidValueError(error)) return null;
+      this.fail('findFirst', error.message);
+    }
     return data ?? null;
   }
 
   async findMany({ where }: FindArgs = {}): Promise<any[]> {
     const query = this.applyWhere(this.db.from(this.table).select('*'), where);
     const { data, error } = await query;
-    if (error) this.fail('findMany', error.message);
+    if (error) {
+      if (this.isInvalidValueError(error)) return [];
+      this.fail('findMany', error.message);
+    }
     return data ?? [];
   }
 
   async findUnique({ where }: { where: { id: string } }): Promise<any> {
     const { data, error } = await this.db.from(this.table).select('*').eq('id', where.id).maybeSingle();
-    if (error) this.fail('findUnique', error.message);
+    if (error) {
+      if (this.isInvalidValueError(error)) return null;
+      this.fail('findUnique', error.message);
+    }
     return data ?? null;
   }
 
@@ -133,6 +148,15 @@ export class SupabaseChatbotRepository {
 export class SupabaseChatbotSettingRepository extends SupabaseChatbotRepository {
   constructor(private readonly fallbackTable: string) {
     super('cod_agent_setting');
+  }
+
+  /** An empty fallback id means "no fallback" — store NULL (the column is a uuid FK). */
+  protected normalize(data: Record<string, any>): Record<string, any> {
+    const payload = super.normalize(data);
+    if (payload.codAgentIdFallback === '') {
+      payload.codAgentIdFallback = null;
+    }
+    return payload;
   }
 
   async findFirst({ where, include }: FindArgs = {}): Promise<any> {
