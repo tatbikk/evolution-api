@@ -63,6 +63,22 @@ export class CodOrderRepository extends SupabaseTableRepository {
     return this.findFirst({ where: { instanceId, merchantOrderRef } });
   }
 
+  /** Look an order up (with its line items) by the IntegrationSession it is bound to. */
+  async findBySessionId(sessionId: string): Promise<CodOrder | null> {
+    const { data, error } = await this.db
+      .from(this.table)
+      .select('*, items:cod_order_item(*)')
+      .eq('sessionId', sessionId)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      if (this.isInvalidValueError(error)) return null;
+      this.fail('findBySessionId', error.message);
+    }
+    return data ?? null;
+  }
+
   /** List orders for an instance, optionally filtered by status. */
   async listByInstance(instanceId: string, status?: string): Promise<CodOrder[]> {
     return this.findMany({ where: status ? { instanceId, status } : { instanceId } });
