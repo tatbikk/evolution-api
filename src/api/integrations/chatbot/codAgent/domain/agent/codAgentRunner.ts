@@ -98,13 +98,20 @@ export async function runCodAgent(params: CodAgentRunParams): Promise<string> {
   };
 
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-    const response = await params.llm.complete({
-      model: params.model,
-      system,
-      messages,
-      tools: COD_AGENT_TOOLS,
-      maxTokens: MAX_TOKENS,
-    });
+    let response;
+    try {
+      response = await params.llm.complete({
+        model: params.model,
+        system,
+        messages,
+        tools: COD_AGENT_TOOLS,
+        maxTokens: MAX_TOKENS,
+      });
+    } catch (err) {
+      // Never leave the customer in silence on an LLM/network failure.
+      logger.error(`[CodAgent] LLM completion failed for order ${params.order.id}: ${err?.message || err}`);
+      return FALLBACK_REPLY;
+    }
 
     if (!response.toolCalls.length) {
       return (response.content || '').trim() || FALLBACK_REPLY;

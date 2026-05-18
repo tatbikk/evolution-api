@@ -146,7 +146,7 @@ export const evoaiController = new EvoaiController(evoaiService, prismaRepositor
 const codAgentService = new CodAgentService(waMonitor, prismaRepository, configService);
 export const codAgentController = new CodAgentController(codAgentService, prismaRepository, waMonitor);
 
-const codOrderService = new CodOrderService(waMonitor, prismaRepository);
+const codOrderService = new CodOrderService(waMonitor, prismaRepository, cache);
 export const codOrderController = new CodOrderController(codOrderService);
 
 export const codSchedulerService = new CodSchedulerService(waMonitor, prismaRepository);

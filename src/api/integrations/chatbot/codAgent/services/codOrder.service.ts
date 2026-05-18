@@ -1,11 +1,11 @@
 import { InstanceDto } from '@api/dto/instance.dto';
 import { PrismaRepository } from '@api/repository/repository.service';
+import { CacheService } from '@api/services/cache.service';
 import { WAMonitoringService } from '@api/services/monitor.service';
 import { Logger } from '@config/logger.config';
 import { BadRequestException } from '@exceptions';
 
 import { buildConfirmationMessage } from '../domain/confirmationMessage';
-import { assertTransition } from '../domain/orderState';
 import { CodOrder, CreateCodOrderDto } from '../dto/codOrder.dto';
 import { codAgentBotRepository } from '../repository/codAgent.repository';
 import { codMerchantRepository } from '../repository/codMerchant.repository';
@@ -16,6 +16,9 @@ export interface CreateCodOrderResult {
   confirmationSent: boolean;
   order: CodOrder | null;
 }
+
+// Anti-spam guard: max order-creation calls per instance per minute.
+const ORDER_RATE_LIMIT_PER_MIN = Math.max(1, Number.parseInt(process.env.CODAGENT_ORDER_RATE_LIMIT || '', 10) || 120);
 
 /**
  * Creates COD orders and fires the single outbound confirmation message.
@@ -31,6 +34,7 @@ export class CodOrderService {
   constructor(
     private readonly waMonitor: WAMonitoringService,
     private readonly prismaRepository: PrismaRepository,
+    private readonly cache: CacheService,
   ) {}
 
   async createOrder(instance: InstanceDto, data: CreateCodOrderDto): Promise<CreateCodOrderResult> {
@@ -41,6 +45,8 @@ export class CodOrderService {
       throw new BadRequestException('Instance not found');
     }
     const instanceId = instanceRecord.id;
+
+    await this.enforceRateLimit(instanceId);
 
     // COD is outbound-initiated: a configured, enabled COD Agent bot must
     // exist so the confirmation reply has an agent and session to bind to.
@@ -82,7 +88,19 @@ export class CodOrderService {
 
     let confirmationSent = order.status !== 'pending';
     if (order.status === 'pending') {
-      confirmationSent = await this.sendConfirmation(instance, instanceId, bot.id, order.id);
+      // Atomically claim the confirmation: only the caller that flips
+      // pending -> awaiting_customer sends, so concurrent identical requests
+      // can never both message the customer.
+      const claimed = await codOrderRepository.updateIfStatus(order.id, 'pending', { status: 'awaiting_customer' });
+      if (!claimed) {
+        confirmationSent = true; // another concurrent request is handling it
+      } else {
+        confirmationSent = await this.sendConfirmation(instance, instanceId, bot.id, order.id);
+        if (!confirmationSent) {
+          // Send failed — revert so the order can be retried later.
+          await codOrderRepository.updateIfStatus(order.id, 'awaiting_customer', { status: 'pending' });
+        }
+      }
     }
 
     return {
@@ -93,9 +111,30 @@ export class CodOrderService {
   }
 
   /**
-   * Sends the confirmation message, opens the order-confirmation session and
-   * moves the order to `awaiting_customer`. Returns false (without throwing)
-   * if anything fails, leaving the order `pending` so it can be retried.
+   * Per-instance fixed-window anti-spam guard. The platform sends exactly one
+   * confirmation per order, so a runaway caller would otherwise turn into bulk
+   * messaging. Backed by the shared cache (Redis when enabled).
+   */
+  private async enforceRateLimit(instanceId: string): Promise<void> {
+    const bucket = Math.floor(Date.now() / 60000);
+    const key = `codorder:rl:${instanceId}:${bucket}`;
+    const count = Number((await this.cache.get(key)) || 0);
+
+    if (count >= ORDER_RATE_LIMIT_PER_MIN) {
+      throw new BadRequestException(
+        `Order rate limit exceeded (${ORDER_RATE_LIMIT_PER_MIN}/min). Slow down and retry shortly.`,
+      );
+    }
+
+    await this.cache.set(key, count + 1, 120);
+  }
+
+  /**
+   * Sends the confirmation message and opens the order-confirmation session.
+   * The order has already been claimed (status `awaiting_customer`) by the
+   * caller. The session is created before the (irreversible) send so the
+   * common failure — an offline instance — leaves no half-finished state.
+   * Returns false without throwing if anything fails.
    */
   private async sendConfirmation(
     instance: InstanceDto,
@@ -122,8 +161,6 @@ export class CodOrderService {
         items: order.items || [],
       });
 
-      await waInstance.textMessage({ number: order.customerJid.split('@')[0], text: message, delay: 0 }, false);
-
       const session = await this.prismaRepository.integrationSession.create({
         data: {
           remoteJid: order.customerJid,
@@ -137,11 +174,11 @@ export class CodOrderService {
         },
       });
 
-      assertTransition(order.status, 'awaiting_customer');
+      await waInstance.textMessage({ number: order.customerJid.split('@')[0], text: message, delay: 0 }, false);
+
       await codOrderRepository.update({
         where: { id: order.id },
         data: {
-          status: 'awaiting_customer',
           confirmationSentAt: new Date().toISOString(),
           sessionId: session.id,
         },
