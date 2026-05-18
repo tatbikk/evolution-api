@@ -1,6 +1,7 @@
 import { InstanceDto } from '@api/dto/instance.dto';
 import { PrismaRepository } from '@api/repository/repository.service';
 import {
+  codAgentController,
   difyController,
   evoaiController,
   evolutionBotController,
@@ -104,6 +105,8 @@ export class ChatbotController {
     evoaiController.emit(emitData);
 
     flowiseController.emit(emitData);
+
+    codAgentController.emit(emitData);
   }
 
   public processDebounce(

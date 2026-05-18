@@ -332,6 +332,7 @@ export type Chatwoot = {
 export type Openai = { ENABLED: boolean; API_KEY_GLOBAL?: string };
 export type Dify = { ENABLED: boolean };
 export type N8n = { ENABLED: boolean };
+export type CodAgent = { ENABLED: boolean };
 export type Evoai = { ENABLED: boolean };
 export type Flowise = { ENABLED: boolean };
 
@@ -416,6 +417,7 @@ export interface Env {
   OPENAI: Openai;
   DIFY: Dify;
   N8N: N8n;
+  CODAGENT: CodAgent;
   EVOAI: Evoai;
   FLOWISE: Flowise;
   CACHE: CacheConf;
@@ -832,6 +834,9 @@ export class ConfigService {
       },
       N8N: {
         ENABLED: process.env?.N8N_ENABLED === 'true',
+      },
+      CODAGENT: {
+        ENABLED: process.env?.CODAGENT_ENABLED === 'true',
       },
       EVOAI: {
         ENABLED: process.env?.EVOAI_ENABLED === 'true',
