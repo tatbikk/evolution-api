@@ -41,8 +41,12 @@ export class CodAgentController extends BaseChatbotController<CodAgentBot, CodAg
   sessionRepository: any;
   userMessageDebounce: { [key: string]: { message: string; timeoutId: NodeJS.Timeout } } = {};
 
-  protected getFallbackBotId(settings: any): string | undefined {
-    return settings?.codAgentIdFallback ?? undefined;
+  protected getFallbackBotId(): string | undefined {
+    // COD Agent must only ever engage a customer inside an active order
+    // session. Returning no fallback stops the base `emit` from running the
+    // agent on an arbitrary inbound message when (and the `findBotTrigger`
+    // override has already returned null) a fallback bot is configured.
+    return undefined;
   }
 
   protected getFallbackFieldName(): string {
