@@ -8,6 +8,7 @@ export interface CodMerchant {
   instanceId: string;
   businessName?: string | null;
   escalationJid?: string | null;
+  confirmationTemplate?: string | null;
   reminderIntervalMinutes: number;
   maxReminders: number;
   noResponseAfterMinutes: number;
@@ -74,4 +75,22 @@ export interface CreateCodOrderItemInput {
   productName: string;
   quantity?: number;
   unitPrice?: number;
+}
+
+/**
+ * Request body accepted by `POST /codAgent/order/:instanceName`.
+ * The customer is identified by a plain phone number; the service derives
+ * the WhatsApp jid. `instanceId` is never accepted from the client — it is
+ * resolved from the authenticated instance.
+ */
+export class CreateCodOrderDto {
+  merchantOrderRef: string;
+  customerNumber: string;
+  customerName?: string;
+  totalAmount?: number;
+  currency?: string;
+  deliveryAddress?: string;
+  deliveryDate?: string;
+  notes?: string;
+  items?: CreateCodOrderItemInput[];
 }

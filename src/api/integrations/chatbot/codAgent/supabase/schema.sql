@@ -85,6 +85,10 @@ create table if not exists public.cod_merchant (
   "instanceId"              text not null unique,
   "businessName"            text,
   "escalationJid"           text,
+  -- Outbound confirmation message template. Supports {businessName},
+  -- {customerName}, {orderRef}, {itemsList}, {total}, {address} placeholders.
+  -- When null, a built-in default template is used.
+  "confirmationTemplate"    text,
   "reminderIntervalMinutes" integer not null default 360,
   "maxReminders"            integer not null default 2,
   "noResponseAfterMinutes"  integer not null default 1440,

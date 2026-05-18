@@ -1,5 +1,6 @@
 export * from '@api/integrations/chatbot/chatwoot/validate/chatwoot.schema';
 export * from '@api/integrations/chatbot/codAgent/validate/codAgent.schema';
+export * from '@api/integrations/chatbot/codAgent/validate/codOrder.schema';
 export * from '@api/integrations/chatbot/dify/validate/dify.schema';
 export * from '@api/integrations/chatbot/evoai/validate/evoai.schema';
 export * from '@api/integrations/chatbot/evolutionBot/validate/evolutionBot.schema';

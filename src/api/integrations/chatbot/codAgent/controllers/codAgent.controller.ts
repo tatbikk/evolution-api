@@ -97,6 +97,22 @@ export class CodAgentController extends BaseChatbotController<CodAgentBot, CodAg
     return bot;
   }
 
+  /**
+   * COD Agent is outbound-initiated: the conversation only exists because we
+   * sent an order confirmation and opened a session. Unlike a normal chatbot,
+   * it must never trigger on arbitrary inbound messages — so when there is no
+   * existing session we return null instead of matching by trigger.
+   */
+  public async findBotTrigger(
+    botRepository: any,
+    content: string,
+    instance: InstanceDto,
+    session?: IntegrationSession,
+  ): Promise<any> {
+    if (!session) return null;
+    return super.findBotTrigger(botRepository, content, instance, session);
+  }
+
   protected async processBot(
     instance: any,
     remoteJid: string,

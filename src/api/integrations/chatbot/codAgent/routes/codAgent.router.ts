@@ -2,17 +2,19 @@ import { RouterBroker } from '@api/abstract/abstract.router';
 import { IgnoreJidDto } from '@api/dto/chatbot.dto';
 import { InstanceDto } from '@api/dto/instance.dto';
 import { HttpStatus } from '@api/routes/index.router';
-import { codAgentController } from '@api/server.module';
+import { codAgentController, codOrderController } from '@api/server.module';
 import {
   codAgentIgnoreJidSchema,
   codAgentSchema,
   codAgentSettingSchema,
   codAgentStatusSchema,
+  codOrderSchema,
   instanceSchema,
 } from '@validate/validate.schema';
 import { RequestHandler, Router } from 'express';
 
 import { CodAgentDto, CodAgentSettingDto } from '../dto/codAgent.dto';
+import { CreateCodOrderDto } from '../dto/codOrder.dto';
 
 export class CodAgentRouter extends RouterBroker {
   constructor(...guards: RequestHandler[]) {
@@ -107,6 +109,15 @@ export class CodAgentRouter extends RouterBroker {
           execute: (instance, data) => codAgentController.ignoreJid(instance, data),
         });
         res.status(HttpStatus.OK).json(response);
+      })
+      .post(this.routerPath('order'), ...guards, async (req, res) => {
+        const response = await this.dataValidate<CreateCodOrderDto>({
+          request: req,
+          schema: codOrderSchema,
+          ClassRef: CreateCodOrderDto,
+          execute: (instance, data) => codOrderController.createOrder(instance, data),
+        });
+        res.status(HttpStatus.CREATED).json(response);
       });
   }
 

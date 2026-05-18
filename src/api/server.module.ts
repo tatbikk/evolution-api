@@ -29,7 +29,9 @@ import { EvolutionBotService } from './integrations/chatbot/evolutionBot/service
 import { FlowiseController } from './integrations/chatbot/flowise/controllers/flowise.controller';
 import { FlowiseService } from './integrations/chatbot/flowise/services/flowise.service';
 import { CodAgentController } from './integrations/chatbot/codAgent/controllers/codAgent.controller';
+import { CodOrderController } from './integrations/chatbot/codAgent/controllers/codOrder.controller';
 import { CodAgentService } from './integrations/chatbot/codAgent/services/codAgent.service';
+import { CodOrderService } from './integrations/chatbot/codAgent/services/codOrder.service';
 import { N8nController } from './integrations/chatbot/n8n/controllers/n8n.controller';
 import { N8nService } from './integrations/chatbot/n8n/services/n8n.service';
 import { OpenaiController } from './integrations/chatbot/openai/controllers/openai.controller';
@@ -142,5 +144,8 @@ export const evoaiController = new EvoaiController(evoaiService, prismaRepositor
 
 const codAgentService = new CodAgentService(waMonitor, prismaRepository, configService);
 export const codAgentController = new CodAgentController(codAgentService, prismaRepository, waMonitor);
+
+const codOrderService = new CodOrderService(waMonitor, prismaRepository);
+export const codOrderController = new CodOrderController(codOrderService);
 
 logger.info('Module - ON');
